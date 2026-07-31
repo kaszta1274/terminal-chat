@@ -1,6 +1,7 @@
 import socket
-import random
-import string
+import threading
+
+active_clients = []
 
 def start_server() -> socket:
     server_object: socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
@@ -14,21 +15,36 @@ def start_server() -> socket:
     
 def server_listen(server_object: socket) -> None:
     server_object.listen()
-    
-    connection_object, _ = server_object.accept()
-    
-    if connection_object:
-        print("SERVER CONNECTED TO CLIENT")
-    
-        connection_object.send(b"type the messege")
-    
-        data_receive = connection_object.recv(1024)
-    
-        while data_receive != b"stop":
-            print("{}: {}".format("CLIENT MESSAGE: ", data_receive.decode('utf-8')))
-            server_input = random.choice(string.ascii_letters)
-            connection_object.send(server_input.encode('utf-8'))
-            data_receive = connection_object.recv(1024)
+    print("Server is listening for incoming connections...")
+
+    while True:
+        connection_object, _ = server_object.accept()
+        print("New connection established!")
+
+        client_thread = threading.Thread(
+            target=handle_client,
+            args=(connection_object,)
+        )
+
+        client_thread.start()
+
+def handle_client(connection_object: socket) -> None:
+    active_clients.append(connection_object)
+
+    while True:
+        try:
+            data = connection_object.recv(1024)
+            if not data:
+                break
+
+            for client in active_clients:
+                if client != connection_object:
+                    client.send(data)
+        except:
+            break
+
+    active_clients.remove(connection_object)
+    connection_object.close()
 
 if __name__ == "__main__":
     server_object: socket  = start_server()

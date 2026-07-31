@@ -1,4 +1,5 @@
 import socket
+import threading
 
 def start_client() -> socket:
     client_object: socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
@@ -10,22 +11,39 @@ def start_client() -> socket:
 
     return client_object
 
-def client_listen(client_object: socket) -> None:
-    data_receive = client_object.recv(1024)
+def receive_messages(client_object: socket) -> None:
+    while True:
+        try:
+            data = client_object.recv(1024)
+            if not data:
+                print("\nDisconnected from server.")
+                break
+            print(f"\n[Incoming]: {data.decode('utf-8')}")
 
-    if data_receive:
-        print("CLIENT CONNECTED TO SERVER")
-        print(data_receive.decode('utf-8'))
+        except:
+            print("\nAn error occured. Disconnecting.")
+            break
 
-        while data_receive:
-            client_input = input().encode('utf-8')
-
-            client_object.send(client_input)
-
-            data_receive = client_object.recv(1024)
-            if data_receive:
-                print("{}: {}".format("SERVER", data_receive.decode('utf-8')))
+def send_messages(client_object: socket) -> None:
+    while True:
+        try:
+            message = input("You: ")
+            if message.lower() == "quit":
+                break
+            client_object.send(message.encode('utf-8'))
+        
+        except:
+            print("\nAn error occured.")
+            break
 
 if __name__ == "__main__":
     client_object: socket  = start_client()
-    client_listen(client_object)
+
+    receive_thread = threading.Thread(
+        target=receive_messages,
+        args=(client_object,)
+    )
+    receive_thread.start()
+
+    send_messages(client_object)
+    client_object.close()
