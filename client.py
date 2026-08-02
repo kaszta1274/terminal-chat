@@ -18,26 +18,30 @@ def receive_messages(client_object: socket) -> None:
             if not data:
                 print("\nDisconnected from server.")
                 break
-            print(f"\n[Incoming]: {data.decode('utf-8')}")
+            print(f"\n{data.decode('utf-8')}")
 
-        except:
-            print("\nAn error occured. Disconnecting.")
+        except Exception as e:
+            print(f"\nAn error occured. Disconnecting. Error: {e}")
             break
 
-def send_messages(client_object: socket) -> None:
+def send_messages(client_object: socket, client_id: str) -> None:
     while True:
         try:
             message = input("You: ")
-            if message.lower() == "quit":
-                break
+            message = f"{client_id}: {message}"
             client_object.send(message.encode('utf-8'))
         
-        except:
-            print("\nAn error occured.")
+        except Exception as e:
+            print(f"\nError while sending a message: {e}")
             break
 
 if __name__ == "__main__":
     client_object: socket  = start_client()
+
+    welcome_text = "---- Connected to the server ----\n---- To exit press CTRL + C ----"
+    print(welcome_text)
+
+    client_id = input("To start chatting, please assign your name: ")
 
     receive_thread = threading.Thread(
         target=receive_messages,
@@ -45,5 +49,12 @@ if __name__ == "__main__":
     )
     receive_thread.start()
 
-    send_messages(client_object)
+    try:
+        send_messages(client_object, client_id)
+
+    except KeyboardInterrupt:
+        print("\nYou have left the chat")
+        client_object.send(f"{client_id} has left the chat".encode('utf-8'))
+
     client_object.close()
+    print("Connection closed")

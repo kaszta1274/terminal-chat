@@ -18,8 +18,8 @@ def server_listen(server_object: socket) -> None:
     print("Server is listening for incoming connections...")
 
     while True:
-        connection_object, _ = server_object.accept()
-        print("New connection established!")
+        connection_object, client_address = server_object.accept()
+        print(f"New connection from {client_address[0]}:{client_address[1]} established!")
 
         client_thread = threading.Thread(
             target=handle_client,
@@ -40,7 +40,8 @@ def handle_client(connection_object: socket) -> None:
             for client in active_clients:
                 if client != connection_object:
                     client.send(data)
-        except:
+        except Exception as e:
+            print(f"\nError while handling client's message: {e}") 
             break
 
     active_clients.remove(connection_object)
@@ -48,4 +49,14 @@ def handle_client(connection_object: socket) -> None:
 
 if __name__ == "__main__":
     server_object: socket  = start_server()
-    server_listen(server_object)
+
+    try:
+        server_listen(server_object)
+        
+    except KeyboardInterrupt:
+        message = "\nServer shutting down..."
+        print(message)
+        for client in active_clients:
+            client.send(message.encode('utf-8'))
+            client.close()
+        server_object.close()
